@@ -35,21 +35,44 @@ The tracked config assumes **btop ≥ 1.4.7**. Older btop silently drops keys it
 does not know and rewrites the file on exit, which is how the platform split
 started in the first place.
 
-Per-machine setup, once:
+Each machine needs one file: `themes/current.theme`. It is gitignored, so it
+must be created by hand, once, per machine.
 
-| Platform | btop            | `themes/current.theme` points at                        |
-| -------- | --------------- | ------------------------------------------------------- |
-| Omarchy  | `pacman -S btop` | `~/.local/state/omarchy/current/theme/btop.theme` (tracks the desktop theme) |
-| macOS    | `brew install btop` | `$(brew --prefix)/share/btop/themes/flat-remix.theme` (static)          |
-
-```sh
-# macOS
-mkdir -p ~/.config/btop/themes
-ln -sf "$(brew --prefix)/share/btop/themes/flat-remix.theme" \
-       ~/.config/btop/themes/current.theme
-```
+| Platform | Install             | `themes/current.theme` is                                                  |
+| -------- | ------------------- | -------------------------------------------------------------------------- |
+| Omarchy  | `pacman -S btop`    | a **symlink** to `~/.local/state/omarchy/current/theme/btop.theme` — the target is regenerated on every theme switch, so it must stay a link |
+| macOS    | `brew install btop` | a **copy** of btop's bundled `flat-remix.theme` — static, so a copy avoids breaking when Homebrew relocates files on upgrade |
 
 Nothing else is platform-conditional. `btop.conf` is byte-identical everywhere.
+
+### macOS setup runbook
+
+Run this **before or immediately after** pulling. Until `themes/current.theme`
+exists, `color_theme = "current"` resolves to nothing and btop falls back to
+default colors — harmless and instantly fixed, but confusing if unexpected.
+
+```sh
+# 1. btop must be >= 1.4.7. An older one strips the newer keys on exit.
+btop --version
+
+# 2. Locate the bundled theme. DO NOT assume the path — Homebrew's layout
+#    varies by architecture and version. Find it:
+find "$(brew --prefix)" -path '*/share/btop/themes/*' -name 'flat-remix*.theme' 2>/dev/null
+
+# 3. Copy it into place (substitute the path step 2 printed).
+mkdir -p ~/.config/btop/themes
+cp "<path from step 2>" ~/.config/btop/themes/current.theme
+
+# 4. Verify. This must print the file's first line, not an error:
+head -1 ~/.config/btop/themes/current.theme
+```
+
+If step 2 finds nothing, any `.theme` file works — `color_theme` only needs
+*some* valid theme at `themes/current.theme`. Check what btop shipped with
+`find "$(brew --prefix)" -name '*.theme' -path '*btop*'`, or grab
+`flat-remix.theme` from the btop repo. The old value `color_theme =
+"flat-remix"` worked on this Mac before consolidation, so the file exists
+somewhere in btop's search path.
 
 ---
 
