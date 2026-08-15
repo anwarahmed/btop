@@ -61,20 +61,47 @@ holds the same value on both branches.
 
 ## Theme resolution
 
-`color_theme = "current"` makes btop load `~/.config/btop/themes/current.theme`.
-On Omarchy that path is a symlink the system maintains, pointing at the active
-desktop theme's btop palette. Result: btop rethemes itself whenever the desktop
-theme changes, with nothing tracked in git.
+btop follows the Omarchy desktop theme through a two-part bridge. Only the
+second part lives in this repo — **Omarchy knows nothing about btop.conf.**
 
-`themes/` is ignored rather than committed. **Tracking the symlink was tried and
-failed** (see Decisions) — a git symlink stores an absolute path, and that path
-is machine- and version-specific.
+### Omarchy's half
 
-Current target on this machine:
+`omarchy theme set <name>` (`/usr/share/omarchy/bin/omarchy-theme-set`) stages
+the theme into `~/.local/state/omarchy/current/next-theme`, then
+`omarchy-theme-set-templates` renders `btop.theme` from
+`/usr/share/omarchy/default/themed/btop.theme.tpl`, substituting
+`{{ background }}`, `{{ foreground }}`, `{{ accent }}`, `{{ selection }}`,
+`{{ muted }}` … from that theme's `colors.toml`. The staging directory is then
+swapped in atomically:
+
+```sh
+rm -rf ~/.local/state/omarchy/current/theme
+mv     ~/.local/state/omarchy/current/next-theme \
+       ~/.local/state/omarchy/current/theme
+```
+
+So `btop.theme` is **generated, not shipped** — it does not exist in
+`/usr/share/omarchy/themes/<name>/`. Last, `omarchy-restart-btop` (which is just
+`pkill -SIGUSR2 btop`) tells a running btop to reload.
+
+### Our half
+
+`color_theme = "current"` makes btop load `~/.config/btop/themes/current.theme`,
+which is a hand-made symlink:
 
 ```
 themes/current.theme -> /home/anwar/.local/state/omarchy/current/theme/btop.theme
 ```
+
+Omarchy does not create or maintain this symlink — it is machine-local setup.
+That is why `themes/` is ignored rather than committed, and why **tracking the
+symlink was tried and failed** (see Decisions).
+
+**Why the symlink survives theme switches:** it targets a *path*, not a
+particular theme's file. The swap above deletes and recreates the whole
+directory on every switch, and the symlink simply re-resolves to the freshly
+generated file. A symlink pointed straight at one theme's colors would break on
+the first switch.
 
 ---
 
