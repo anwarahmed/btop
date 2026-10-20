@@ -243,7 +243,7 @@ Update it when:
   symlink attempt is the most useful entry in this file precisely because it
   failed.
 - **btop or Omarchy upgrades and rewrites the config** → bump the version in
-  Branches, then diff non-comment lines and record only values that genuinely
+  Platforms, then diff non-comment lines and record only values that genuinely
   moved.
 - **`.gitignore`, the branch layout, or theme resolution changes** → rewrite the
   matching section rather than appending to it.
